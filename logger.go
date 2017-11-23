@@ -21,6 +21,7 @@ const (
 	LvlError
 	LvlWarn
 	LvlInfo
+	LvlExtra
 	LvlDebug
 )
 
@@ -29,6 +30,8 @@ func (l Lvl) String() string {
 	switch l {
 	case LvlDebug:
 		return "dbug"
+	case LvlExtra:
+		return "extra"
 	case LvlInfo:
 		return "info"
 	case LvlWarn:
@@ -48,6 +51,8 @@ func LvlFromString(lvlString string) (Lvl, error) {
 	switch lvlString {
 	case "debug", "dbug":
 		return LvlDebug, nil
+	case "extra":
+		return LvlExtra, nil
 	case "info":
 		return LvlInfo, nil
 	case "warn":
@@ -90,11 +95,12 @@ type Logger interface {
 	SetHandler(h Handler)
 
 	// Log a message at the given level with context key/value pairs
-	Debug(msg string, ctx ...interface{})
-	Info(msg string, ctx ...interface{})
-	Warn(msg string, ctx ...interface{})
-	Error(msg string, ctx ...interface{})
-	Crit(msg string, ctx ...interface{})
+	Debug(format string, a ...interface{})
+	Extra(format string, a ...interface{})
+	Info(format string, a ...interface{})
+	Warn(format string, a ...interface{})
+	Error(format string, a ...interface{})
+	Crit(format string, a ...interface{})
 }
 
 type logger struct {
@@ -131,24 +137,28 @@ func newContext(prefix []interface{}, suffix []interface{}) []interface{} {
 	return newCtx
 }
 
-func (l *logger) Debug(msg string, ctx ...interface{}) {
-	l.write(msg, LvlDebug, ctx)
+func (l *logger) Debug(format string, a ...interface{}) {
+	l.write(fmt.Sprintf(format, a...), LvlDebug, nil)
 }
 
-func (l *logger) Info(msg string, ctx ...interface{}) {
-	l.write(msg, LvlInfo, ctx)
+func (l *logger) Extra(format string, a ...interface{}) {
+	l.write(fmt.Sprintf(format, a...), LvlExtra, nil)
 }
 
-func (l *logger) Warn(msg string, ctx ...interface{}) {
-	l.write(msg, LvlWarn, ctx)
+func (l *logger) Info(format string, a ...interface{}) {
+	l.write(fmt.Sprintf(format, a...), LvlInfo, nil)
 }
 
-func (l *logger) Error(msg string, ctx ...interface{}) {
-	l.write(msg, LvlError, ctx)
+func (l *logger) Warn(format string, a ...interface{}) {
+	l.write(fmt.Sprintf(format, a...), LvlWarn, nil)
 }
 
-func (l *logger) Crit(msg string, ctx ...interface{}) {
-	l.write(msg, LvlCrit, ctx)
+func (l *logger) Error(format string, a ...interface{}) {
+	l.write(fmt.Sprintf(format, a...), LvlError, nil)
+}
+
+func (l *logger) Crit(format string, a ...interface{}) {
+	l.write(fmt.Sprintf(format, a...), LvlCrit, nil)
 }
 
 func (l *logger) GetHandler() Handler {

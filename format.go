@@ -9,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/fatih/color"
 )
 
 const (
@@ -77,6 +79,36 @@ func TerminalFormat() Format {
 		// print the keys logfmt style
 		logfmt(b, r.Ctx, color)
 		return b.Bytes()
+	})
+}
+
+// TerminalCLIFormat formats log records optimized for human readability on a
+// terminal with color-coded level output for a command-line interface style
+// application.
+//
+// This format should only be used for interactive programs.
+//
+//     MESAGE
+//
+func TerminalCLIFormat() Format {
+	return FormatFunc(func(r *Record) []byte {
+		x := r.Msg
+		switch r.Lvl {
+		case LvlDebug:
+			x = color.Set(color.Faint).Sprint(r.Msg) + "\n"
+		case LvlExtra:
+			x = r.Msg + "\n"
+		case LvlInfo:
+			x = r.Msg + "\n"
+		case LvlWarn:
+			x = color.YellowString(r.Msg) + "\n"
+		case LvlError:
+			x = color.RedString(r.Msg) + "\n"
+		case LvlCrit:
+			x = color.MagentaString(r.Msg) + "\n"
+		default:
+		}
+		return []byte(x)
 	})
 }
 

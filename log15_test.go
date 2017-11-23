@@ -22,8 +22,8 @@ func testHandler() (Handler, *Record) {
 	}), rec
 }
 
-func testLogger() (Logger, Handler, *Record) {
-	l := New()
+func testLogger(ctx ...interface{}) (Logger, Handler, *Record) {
+	l := New(ctx...)
 	h, r := testHandler()
 	l.SetHandler(LazyHandler(h))
 	return l, h, r
@@ -37,14 +37,14 @@ func TestLazy(t *testing.T) {
 		return x
 	}
 
-	l, _, r := testLogger()
-	l.Info("", "x", Lazy{lazy})
+	l, _, r := testLogger("x", Lazy{lazy})
+	l.Info("")
 	if r.Ctx[1] != 1 {
 		t.Fatalf("Lazy function not evaluated, got %v, expected %d", r.Ctx[1], 1)
 	}
 
 	x = 2
-	l.Info("", "x", Lazy{lazy})
+	l.Info("")
 	if r.Ctx[1] != 2 {
 		t.Fatalf("Lazy function not evaluated, got %v, expected %d", r.Ctx[1], 1)
 	}
@@ -64,21 +64,24 @@ func TestInvalidLazy(t *testing.T) {
 		}
 	}
 
-	l.Info("", "x", Lazy{1})
+	l, _, r = testLogger("x", Lazy{1})
+	l.Info("")
 	validate()
 
-	l.Info("", "x", Lazy{func(x int) int { return x }})
+	l, _, r = testLogger("x", Lazy{func(x int) int { return x }})
+	l.Info("")
 	validate()
 
-	l.Info("", "x", Lazy{func() {}})
+	l, _, r = testLogger("x", Lazy{func() {}})
+	l.Info("")
 	validate()
 }
 
 func TestCtx(t *testing.T) {
 	t.Parallel()
 
-	l, _, r := testLogger()
-	l.Info("", Ctx{"x": 1, "y": "foo", "tester": t})
+	l, _, r := testLogger(Ctx{"x": 1, "y": "foo", "tester": t})
+	l.Info("")
 	if len(r.Ctx) != 6 {
 		t.Fatalf("Expecting Ctx tansformed into %d ctx args, got %d: %v", 6, len(r.Ctx), r.Ctx)
 	}
@@ -95,7 +98,8 @@ func TestJson(t *testing.T) {
 	t.Parallel()
 
 	l, buf := testFormatter(JsonFormat())
-	l.Error("some message", "x", 1, "y", 3.2)
+	l = l.New("x", 1, "y", 3.2)
+	l.Error("some message")
 
 	var v map[string]interface{}
 	decoder := json.NewDecoder(buf)
@@ -129,8 +133,9 @@ func TestLogfmt(t *testing.T) {
 	var nilVal *testtype
 
 	l, buf := testFormatter(LogfmtFormat())
-	l.Error("some message", "x", 1, "y", 3.2, "equals", "=", "quote", "\"",
+	l = l.New("x", 1, "y", 3.2, "equals", "=", "quote", "\"",
 		"nil", nilVal, "carriage_return", "bang"+string('\r')+"foo", "tab", "bar	baz", "newline", "foo\nbar")
+	l.Error("some message")
 
 	// skip timestamp in comparison
 	got := buf.Bytes()[27:buf.Len()]
@@ -204,8 +209,8 @@ func TestLogContext(t *testing.T) {
 func TestMapCtx(t *testing.T) {
 	t.Parallel()
 
-	l, _, r := testLogger()
-	l.Crit("test", Ctx{"foo": "bar"})
+	l, _, r := testLogger(Ctx{"foo": "bar"})
+	l.Crit("test")
 
 	if len(r.Ctx) != 2 {
 		t.Fatalf("Wrong context length, got %d, expected %d", len(r.Ctx), 2)
@@ -281,7 +286,8 @@ func TestNetHandler(t *testing.T) {
 		t.Fatal(err)
 	}
 	lg.SetHandler(h)
-	lg.Info("test", "x", 1)
+	lg = lg.New("x", 1)
+	lg.Info("test")
 
 	select {
 	case <-time.After(time.Second):
@@ -296,20 +302,23 @@ func TestNetHandler(t *testing.T) {
 func TestMatchFilterHandler(t *testing.T) {
 	t.Parallel()
 
-	l, h, r := testLogger()
+	l, h, r := testLogger("foo", "bar")
 	l.SetHandler(MatchFilterHandler("err", nil, h))
-
-	l.Crit("test", "foo", "bar")
+	l.Crit("test")
 	if r.Msg != "" {
 		t.Fatalf("expected filter handler to discard msg")
 	}
 
-	l.Crit("test2", "err", "bad fd")
+	l, h, r = testLogger("err", "bad fd")
+	l.SetHandler(MatchFilterHandler("err", nil, h))
+	l.Crit("test2")
 	if r.Msg != "" {
 		t.Fatalf("expected filter handler to discard msg")
 	}
 
-	l.Crit("test3", "err", nil)
+	l, h, r = testLogger("err", nil)
+	l.SetHandler(MatchFilterHandler("err", nil, h))
+	l.Crit("test3")
 	if r.Msg != "test3" {
 		t.Fatalf("expected filter handler to allow msg")
 	}
@@ -372,7 +381,8 @@ func TestFailoverHandler(t *testing.T) {
 	}
 
 	w.fail = true
-	l.Debug("test failover", "x", 1)
+	l = l.New("x", 1)
+	l.Debug("test failover")
 	if r.Msg != "test failover" {
 		t.Fatalf("expected failover")
 	}
@@ -557,7 +567,8 @@ func TestConcurrent(t *testing.T) {
 		go func(idx int) {
 			defer wg.Done()
 			for j := 0; j < 10000; j++ {
-				l.Info("test message", "goroutine_idx", idx)
+				tmp := l.New("goroutine_idx", idx)
+				tmp.Info("test message")
 			}
 		}(i)
 	}
