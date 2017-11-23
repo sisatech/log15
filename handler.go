@@ -31,6 +31,19 @@ func (h funcHandler) Log(r *Record) error {
 	return h(r)
 }
 
+type FormatHandler interface {
+	FormatFunction() Format
+}
+
+type formatHandler struct {
+	Handler
+	fmtr Format
+}
+
+func (h *formatHandler) FormatFunction() Format {
+	return h.fmtr
+}
+
 // StreamHandler writes log records to an io.Writer
 // with the given format. StreamHandler can be used
 // to easily begin writing log records to other
@@ -43,7 +56,10 @@ func StreamHandler(wr io.Writer, fmtr Format) Handler {
 		_, err := wr.Write(fmtr.Format(r))
 		return err
 	})
-	return LazyHandler(SyncHandler(h))
+	return &formatHandler{
+		Handler: LazyHandler(SyncHandler(h)),
+		fmtr:    fmtr,
+	}
 }
 
 // SyncHandler can be wrapped around a handler to guarantee that
@@ -67,7 +83,10 @@ func FileHandler(path string, fmtr Format) (Handler, error) {
 	if err != nil {
 		return nil, err
 	}
-	return closingHandler{f, StreamHandler(f, fmtr)}, nil
+	return &formatHandler{
+		Handler: closingHandler{f, StreamHandler(f, fmtr)},
+		fmtr:    fmtr,
+	}, nil
 }
 
 // NetHandler opens a socket to the given address and writes records
@@ -78,7 +97,10 @@ func NetHandler(network, addr string, fmtr Format) (Handler, error) {
 		return nil, err
 	}
 
-	return closingHandler{conn, StreamHandler(conn, fmtr)}, nil
+	return &formatHandler{
+		Handler: closingHandler{conn, StreamHandler(conn, fmtr)},
+		fmtr:    fmtr,
+	}, nil
 }
 
 // XXX: closingHandler is essentially unused at the moment
