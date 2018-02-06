@@ -43,26 +43,31 @@ func Root() Logger {
 // runtime.Caller(2) always refers to the call site in client code.
 
 // Debug is a convenient alias for Root().Debug
-func Debug(msg string, ctx ...interface{}) {
-	root.write(msg, LvlDebug, ctx)
+func Debug(format string, a ...interface{}) {
+	root.Debug(format, a...)
+}
+
+// Extra is a convenient alias for Root().Extra
+func Extra(format string, a ...interface{}) {
+	root.Extra(format, a...)
 }
 
 // Info is a convenient alias for Root().Info
-func Info(msg string, ctx ...interface{}) {
-	root.write(msg, LvlInfo, ctx)
+func Info(format string, a ...interface{}) {
+	root.Info(format, a...)
 }
 
 // Warn is a convenient alias for Root().Warn
-func Warn(msg string, ctx ...interface{}) {
-	root.write(msg, LvlWarn, ctx)
+func Warn(format string, a ...interface{}) {
+	root.Warn(format, a...)
 }
 
 // Error is a convenient alias for Root().Error
-func Error(msg string, ctx ...interface{}) {
-	root.write(msg, LvlError, ctx)
+func Error(format string, a ...interface{}) {
+	root.Error(format, a...)
 }
 
 // Crit is a convenient alias for Root().Crit
-func Crit(msg string, ctx ...interface{}) {
-	root.write(msg, LvlCrit, ctx)
+func Crit(format string, a ...interface{}) {
+	root.Crit(format, a...)
 }
